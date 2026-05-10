@@ -81,7 +81,7 @@ function drawSprite(sprite, palette, x, y, scale, flip = false) {
 // --- Palettes ---------------------------------------------------------------
 const MOM_PAL = [
   null,
-  '#f5d77a', '#cf9f3a',
+  '#dfba7e', '#9b7e54',
   '#f3c9a5', '#d99e7a',
   '#ffffff', '#d6d6e0',
   '#3e6da6', '#27466b',
@@ -125,12 +125,12 @@ const MOM_STAND = parseSprite(`
 ..123A33A21...
 ..123333321...
 ..1233BB321...
-....333333....
-.....3333.....
-...55555555...
-..5555555555..
-..5555555555..
-..5555555555..
+.122333333221.
+122..3333..221
+12255555555221
+12555555555521
+12555555555521
+.255555555552.
 ...55555555...
 ...77777777...
 ...77777777...
@@ -150,12 +150,12 @@ const MOM_STEP = parseSprite(`
 ..123A33A21...
 ..123333321...
 ..1233BB321...
-....333333....
-.....3333.....
-...55555555...
-..5555555555..
-..5555555555..
-..5555555555..
+.122333333221.
+122..3333..221
+12255555555221
+12555555555521
+12555555555521
+.255555555552.
 ...55555555...
 ...77777777...
 ...77777777...
@@ -175,12 +175,12 @@ const MOM_HUG = parseSprite(`
 ..123A33A21...
 ..123333321...
 ..1233BB321...
-....333333....
-.....3333.....
+.122333333221.
+122..3333..221
 33555555555533
 33555555555533
 .35555555553..
-..5555555555..
+.25555555552..
 ...55555555...
 ...77777777...
 ...77777777...
@@ -431,7 +431,7 @@ const doors = [
   makeDoor(0,  90, FLOOR1_Y),
   makeDoor(1, 240, FLOOR1_Y),
   makeDoor(2, 110, FLOOR2_Y),
-  makeDoor(3, 280, FLOOR2_Y),
+  makeDoor(3, 820, FLOOR2_Y),
   makeDoor(4, 580, FLOOR3_Y),
   makeDoor(5, 760, FLOOR3_Y),
 ];
@@ -752,6 +752,106 @@ function drawHouse() {
   ctx.fillStyle = '#7c5a3f';
   ctx.fillRect(0, FLOOR3_Y - 110, 8, FLOOR1_Y - (FLOOR3_Y - 110) + 30);
   ctx.fillRect(W - 8, FLOOR3_Y - 110, 8, FLOOR1_Y - (FLOOR3_Y - 110) + 30);
+}
+
+function drawDecorations() {
+  // Floor 1: window, side table, family portrait
+  drawWindow(480, 420, 80, 70);
+  drawSideTable(360, 478);
+  drawPortrait(640, 420, 70, 70, 'family');
+
+  // Floor 2: heart portrait between the two staircases (clear of stair steps)
+  drawPortrait(540, 270, 70, 70, 'heart');
+
+  // Floor 3: window and a flower portrait
+  drawWindow(180, 120, 80, 70);
+  drawPortrait(400, 120, 70, 70, 'flower');
+}
+
+function drawWindow(x, y, w, h) {
+  // Outer frame
+  ctx.fillStyle = '#7c5a3f';
+  ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+  // Glass with sky gradient
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  grad.addColorStop(0, '#9ed3ec');
+  grad.addColorStop(1, '#cce6f5');
+  ctx.fillStyle = grad;
+  ctx.fillRect(x, y, w, h);
+  // Cross frame
+  ctx.fillStyle = '#a07a55';
+  ctx.fillRect(x + w / 2 - 2, y, 4, h);
+  ctx.fillRect(x, y + h / 2 - 2, w, 4);
+  // Sill
+  ctx.fillStyle = '#5a3f29';
+  ctx.fillRect(x - 6, y + h + 2, w + 12, 4);
+  // Curtains
+  ctx.fillStyle = '#e88aac';
+  ctx.fillRect(x - 8, y - 4, 8, h + 8);
+  ctx.fillRect(x + w, y - 4, 8, h + 8);
+  ctx.fillStyle = '#c46b8c';
+  ctx.fillRect(x - 8, y - 4, 2, h + 8);
+  ctx.fillRect(x + w + 6, y - 4, 2, h + 8);
+}
+
+function drawPortrait(x, y, w, h, kind) {
+  // Outer frame
+  ctx.fillStyle = '#6f4a26';
+  ctx.fillRect(x - 5, y - 5, w + 10, h + 10);
+  ctx.fillStyle = '#caa073';
+  ctx.fillRect(x - 3, y - 3, w + 6, h + 6);
+  // Inner painting background
+  ctx.fillStyle = '#fbe4d4';
+  ctx.fillRect(x, y, w, h);
+  if (kind === 'heart') {
+    drawHeart(x + w / 2, y + h / 2 - 4, Math.min(w, h) * 0.5, '#ff5f8a');
+  } else if (kind === 'flower') {
+    drawFlowerHead(x + w / 2, y + h / 2, '#ff95c0');
+    drawFlowerHead(x + w * 0.3, y + h * 0.65, '#ffd07a');
+    drawFlowerHead(x + w * 0.72, y + h * 0.65, '#c9a0ff');
+  } else if (kind === 'family') {
+    // Three little stylized heads to suggest a family photo
+    ctx.fillStyle = '#dfba7e';                 // mom (dirty blonde)
+    ctx.beginPath(); ctx.arc(x + w * 0.30, y + h * 0.55, h * 0.18, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a2418';                 // daughter (dark brown)
+    ctx.beginPath(); ctx.arc(x + w * 0.55, y + h * 0.65, h * 0.13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a1a10';                 // husband (darker)
+    ctx.beginPath(); ctx.arc(x + w * 0.78, y + h * 0.50, h * 0.20, 0, Math.PI * 2); ctx.fill();
+    // Suggestion of bodies
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + w * 0.22, y + h * 0.78, w * 0.16, h * 0.22);
+    ctx.fillStyle = '#f29bc0';
+    ctx.fillRect(x + w * 0.48, y + h * 0.82, w * 0.14, h * 0.18);
+    ctx.fillStyle = '#4f8b5c';
+    ctx.fillRect(x + w * 0.68, y + h * 0.74, w * 0.20, h * 0.26);
+  }
+}
+
+function drawSideTable(x, y) {
+  // Table top
+  ctx.fillStyle = '#7c5a3f';
+  ctx.fillRect(x, y, 60, 6);
+  ctx.fillStyle = '#5a3f29';
+  ctx.fillRect(x, y + 5, 60, 1);
+  // Legs
+  ctx.fillRect(x + 4, y + 6, 5, 26);
+  ctx.fillRect(x + 51, y + 6, 5, 26);
+  // Cross brace
+  ctx.fillRect(x + 6, y + 22, 48, 3);
+  // Vase
+  ctx.fillStyle = '#7fb6d6';
+  ctx.fillRect(x + 22, y - 14, 16, 14);
+  ctx.fillStyle = '#5a8aa6';
+  ctx.fillRect(x + 22, y - 14, 16, 3);
+  // Flowers in vase
+  drawFlowerHead(x + 30, y - 24, '#ff95c0');
+  drawFlowerHead(x + 22, y - 18, '#ffd07a');
+  drawFlowerHead(x + 38, y - 18, '#c9a0ff');
+  ctx.strokeStyle = '#3a8a4a';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x + 30, y - 22); ctx.lineTo(x + 30, y - 14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 22, y - 16); ctx.lineTo(x + 28, y - 14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 38, y - 16); ctx.lineTo(x + 32, y - 14); ctx.stroke();
 }
 
 function drawPlatforms() {
@@ -1084,6 +1184,7 @@ function drawTitleBar() {
 function draw() {
   drawBackground();
   drawHouse();
+  drawDecorations();
   drawPlatforms();
 
   // Draw doors and door reveals (decoys drawn here; family handled below)
