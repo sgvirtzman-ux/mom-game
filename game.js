@@ -4,8 +4,8 @@
 // ============================================================================
 
 // --- Personalization (edit these before sharing) ----------------------------
-const DAUGHTER_NAME = "Sweetheart"; // PERSONALIZE
-const HUSBAND_NAME  = "Honey";      // PERSONALIZE
+const DAUGHTER_NAME = "Emma";      // PERSONALIZE
+const HUSBAND_NAME  = "Sebastian"; // PERSONALIZE
 const TITLE         = "A House Full of Love";
 
 // --- Canvas -----------------------------------------------------------------
