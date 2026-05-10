@@ -5,7 +5,7 @@
 
 // --- Personalization (edit these before sharing) ----------------------------
 const DAUGHTER_NAME = "Emma";      // PERSONALIZE
-const HUSBAND_NAME  = "Sebastian"; // PERSONALIZE
+const HUSBAND_NAME  = "Seb"; // PERSONALIZE
 const TITLE         = "A House Full of Love";
 
 // --- Canvas -----------------------------------------------------------------
@@ -1228,7 +1228,7 @@ function drawHud() {
     ctx.fillRect(12, 12, 168, 28);
     ctx.fillStyle = '#fff';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`Family found: ${found} / 2`, 22, 26);
+    ctx.fillText(`Werners found: ${found} / 2`, 22, 26);
     ctx.textBaseline = 'alphabetic';
   }
 }
