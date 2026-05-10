@@ -92,7 +92,7 @@ const MOM_PAL = [
 
 const DAUGHTER_PAL = [
   null,
-  '#3a2418', '#221409',
+  '#8a5e3a', '#4a2e18',
   '#f3c9a5', '#d99e7a',
   '#5a3a22',
   '#f29bc0', '#fcd0e0',
@@ -104,7 +104,7 @@ const DAUGHTER_PAL = [
 
 const HUSBAND_PAL = [
   null,
-  '#2a1a10', '#170c06',
+  '#6e4a2a', '#3e2818',
   '#e8b591', '#c98e6c',
   '#3e7fb8',
   '#4f8b5c', '#365e3f',
@@ -200,12 +200,12 @@ const DAUGHTER_STAND = parseSprite(`
 .1235335321.
 .1233333321.
 ..123BB321..
-...333333...
-..66666666..
-.6666666666.
-666677776666
-666666666666
-.6666666666.
+.1233333321.
+126666666621
+166666666661
+166677776661
+166666666661
+.2666666662.
 ..66666666..
 ...33..33...
 ...AA..AA...
@@ -221,12 +221,12 @@ const DAUGHTER_STEP = parseSprite(`
 .1235335321.
 .1233333321.
 ..123BB321..
-...333333...
-..66666666..
-.6666666666.
-666677776666
-666666666666
-.6666666666.
+.1233333321.
+126666666621
+166666666661
+166677776661
+166666666661
+.2666666662.
 ..66666666..
 ....3333....
 ....AAAA....
@@ -242,7 +242,7 @@ const DAUGHTER_HUG = parseSprite(`
 .1235335321.
 .1233333321.
 ..123BB321..
-...333333...
+.1233333321.
 3.66666666.3
 3666666666.3
 666677776666
@@ -395,16 +395,11 @@ const platforms = [
   { x: 100, y: 210, w: 150, h: 30 }, // joins floor 3 left segment
 ];
 
-// Wall edges so the player can't walk off the visible house on floors 2/3.
-// Floor 1 uses canvas edges as walls already.
-const walls = [
-  // Floor 2 walls
-  { x: 0,   y: FLOOR2_Y - 110, w: 8,  h: 110 },
-  { x: 952, y: FLOOR2_Y - 110, w: 8,  h: 110 },
-  // Floor 3 walls
-  { x: 0,   y: FLOOR3_Y - 110, w: 8,  h: 110 },
-  { x: 952, y: FLOOR3_Y - 110, w: 8,  h: 110 },
-];
+// No side walls: the player can walk off either screen edge and wrap
+// around to the opposite side at the same height. This is what lets her
+// reach the right segment of floor 2 (which would otherwise require
+// dropping down to floor 1 and climbing the right-hand staircase).
+const walls = [];
 
 // All collision rectangles
 const solids = [...platforms, ...walls];
@@ -482,6 +477,7 @@ const state = {
   textAlpha: 0,
   confetti: [],
   toast: null,       // { text, until } for short messages on door reveals
+  speech: null,      // { text, startTime } for the opening speech bubble
 };
 
 // --- Physics ----------------------------------------------------------------
@@ -534,8 +530,10 @@ function updatePlay() {
       else if (player.vx < 0) player.x = s.x + s.w;
     }
   }
-  if (player.x < 0) player.x = 0;
-  if (player.x + player.w > W) player.x = W - player.w;
+  // Wrap around the screen edges (Pac-Man style) so the right segment of
+  // floor 2 is reachable by walking off the right edge.
+  if (player.x > W) player.x = -player.w;
+  else if (player.x + player.w < 0) player.x = W;
 
   // Move Y with collision
   player.y += player.vy;
@@ -582,6 +580,15 @@ function updatePlay() {
   // Toast timeout
   if (state.toast && performance.now() > state.toast.until) {
     state.toast = null;
+  }
+
+  // Dismiss the opening speech bubble after a few seconds, or once she
+  // starts moving (and the player has had a moment to read it).
+  if (state.speech) {
+    const elapsed = performance.now() - state.speech.startTime;
+    if (elapsed > 5000 || (elapsed > 700 && player.vx !== 0)) {
+      state.speech = null;
+    }
   }
 }
 
@@ -1084,6 +1091,88 @@ function drawConfetti() {
   }
 }
 
+function roundRectPath(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function drawSpeechBubble() {
+  if (!state.speech) return;
+  const elapsed = performance.now() - state.speech.startTime;
+  // Fade in over the first 200ms, fade out over the last 400ms
+  const fadeIn = Math.min(1, elapsed / 200);
+  const fadeOut = Math.min(1, (5000 - elapsed) / 400);
+  const alpha = Math.max(0, Math.min(fadeIn, fadeOut));
+  if (alpha <= 0) return;
+
+  const text = state.speech.text;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  const padX = 14, padY = 8;
+  const tw = ctx.measureText(text).width;
+  const bw = tw + padX * 2;
+  const bh = 16 + padY * 2;
+
+  // Anchor: tip of tail near the top of mom's head
+  const ax = player.x + player.w / 2;
+  const ay = player.y + 6;
+
+  // Bubble sits above-and-slightly-right of mom; clamp to canvas
+  let bx = ax + 18;
+  let by = ay - bh - 18;
+  if (bx + bw > W - 8) bx = W - 8 - bw;
+  if (bx < 8) bx = 8;
+  if (by < 8) by = 8;
+
+  // Bubble body
+  roundRectPath(bx, by, bw, bh, 10);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = '#3a2a30';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Tail (triangle from bubble bottom to anchor)
+  const tailBaseX = Math.max(bx + 12, Math.min(bx + bw - 28, ax - 14));
+  ctx.beginPath();
+  ctx.moveTo(tailBaseX, by + bh);
+  ctx.lineTo(ax, ay);
+  ctx.lineTo(tailBaseX + 16, by + bh);
+  ctx.closePath();
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  // Re-stroke just the two diagonal sides of the tail (not the top edge,
+  // which is the bubble's bottom and is already a thick stroke)
+  ctx.beginPath();
+  ctx.moveTo(tailBaseX, by + bh);
+  ctx.lineTo(ax, ay);
+  ctx.moveTo(tailBaseX + 16, by + bh);
+  ctx.lineTo(ax, ay);
+  ctx.strokeStyle = '#3a2a30';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Cover the bubble bottom seam under the tail with a small white stripe
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(tailBaseX + 1, by + bh - 1, 15, 2);
+
+  // Text
+  ctx.fillStyle = '#1a1a1a';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, bx + padX, by + bh / 2);
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+}
+
 function drawHud() {
   // Door prompt
   if (state.phase === 'play' && state.promptDoor >= 0) {
@@ -1215,6 +1304,7 @@ function draw() {
   }
 
   drawConfetti();
+  if (state.phase === 'play') drawSpeechBubble();
   drawHud();
   drawTitleBar();
   if (state.phase === 'ending') drawEndingText();
@@ -1231,6 +1321,7 @@ function loop() {
 // --- Init -------------------------------------------------------------------
 function init() {
   assignDoorContents();
+  state.speech = { text: "Where is everyone...?", startTime: performance.now() };
   loop();
 }
 
