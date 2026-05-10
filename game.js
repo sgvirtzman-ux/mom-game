@@ -531,9 +531,14 @@ function updatePlay() {
     }
   }
   // Wrap around the screen edges (Pac-Man style) so the right segment of
-  // floor 2 is reachable by walking off the right edge.
-  if (player.x > W) player.x = -player.w;
-  else if (player.x + player.w < 0) player.x = W;
+  // floor 2 is reachable by walking off the right edge. We use a modular
+  // shift instead of snapping to -player.w so the overshoot past the edge
+  // carries through; otherwise she lands at exactly the floor's left edge,
+  // gets pinned against the platform's side by horizontal collision while
+  // gravity drags her down, and falls a floor before she can re-enter.
+  const wrapSpan = W + player.w;
+  if (player.x > W) player.x -= wrapSpan;
+  else if (player.x + player.w < 0) player.x += wrapSpan;
 
   // Move Y with collision
   player.y += player.vy;
