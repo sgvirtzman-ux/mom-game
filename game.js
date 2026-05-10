@@ -23,6 +23,7 @@ const CONSUME_CODES = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','K
 window.addEventListener('keydown', e => {
   if (!keys[e.code]) justPressed[e.code] = true;
   keys[e.code] = true;
+  ensureAudio(); // Browser autoplay policy: any keypress unlocks audio
   if (CONSUME_CODES.includes(e.code)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -33,6 +34,104 @@ function pressed(...codes) {
   return false;
 }
 function held(...codes) { return codes.some(c => keys[c]); }
+
+// --- Audio ------------------------------------------------------------------
+// Tiny chiptune fanfare for the reunion. We synthesize square + triangle
+// oscillators with a quick attack / release so each note has a snappy
+// 8-bit feel, no audio files to ship.
+let audioCtx = null;     // null = uninitialized, false = unavailable, else AudioContext
+let masterGain = null;
+let fanfarePlayed = false;
+
+function ensureAudio() {
+  if (audioCtx === false) return null;
+  if (audioCtx === null) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { audioCtx = false; return null; }
+    try {
+      audioCtx = new AC();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.35;
+      masterGain.connect(audioCtx.destination);
+    } catch (e) {
+      audioCtx = false;
+      return null;
+    }
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+const NOTE = {
+  C3:  130.81, E3: 164.81, G3:  196.00,
+  C4:  261.63, G4: 392.00,
+  C5:  523.25, D5: 587.33, E5: 659.25, G5:  783.99, A5: 880.00, B5: 987.77,
+  C6: 1046.50, D6:1174.66, E6:1318.51, G6: 1567.98,
+  C7: 2093.00,
+};
+
+function playTone(freq, startTime, duration, type, volume) {
+  const ctx = audioCtx;
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  const attack = 0.005;
+  const release = Math.min(0.05, duration * 0.4);
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(volume, startTime + attack);
+  gain.gain.setValueAtTime(volume, Math.max(startTime + attack, startTime + duration - release));
+  gain.gain.linearRampToValueAtTime(0, startTime + duration);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.02);
+}
+
+// Original C-major victory fanfare. Times in seconds, durations in seconds.
+// Melody is a square wave (the iconic NES lead), bass is a triangle wave
+// (the warm sub the NES used for bass lines).
+const FANFARE_MELODY = [
+  // [note, t,   dur]
+  ['G4',  0.00, 0.10],
+  ['C5',  0.10, 0.10],
+  ['E5',  0.20, 0.10],
+  ['G5',  0.30, 0.10],
+  ['C6',  0.40, 0.30],
+  ['E6',  0.70, 0.20],
+  ['D6',  0.90, 0.10],
+  ['C6',  1.00, 0.20],
+  ['G5',  1.20, 0.10],
+  ['C6',  1.30, 1.05],
+  // Triumphant ending
+  ['E6',  2.40, 0.13],
+  ['G6',  2.55, 0.13],
+  ['C7',  2.70, 0.95],
+];
+
+const FANFARE_BASS = [
+  ['C3',  0.00, 0.38],
+  ['G3',  0.40, 0.38],
+  ['C3',  0.80, 0.38],
+  ['G3',  1.20, 0.38],
+  ['C3',  1.60, 0.38],
+  ['G3',  2.00, 0.38],
+  ['E3',  2.40, 0.28],
+  ['C3',  2.70, 0.95],
+];
+
+function playFanfare() {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + 0.05;
+  for (const [n, t, d] of FANFARE_MELODY) {
+    playTone(NOTE[n], t0 + t, d, 'square', 0.20);
+  }
+  for (const [n, t, d] of FANFARE_BASS) {
+    playTone(NOTE[n], t0 + t, d, 'triangle', 0.30);
+  }
+}
 
 // --- Sprite parsing ---------------------------------------------------------
 // Each sprite is a multiline string. '.' or ' ' = transparent.
@@ -661,6 +760,10 @@ function updateEnding() {
     family.daughter.startY = family.daughter.anchorY;
     family.husband.startX = family.husband.anchorX;
     family.husband.startY = family.husband.anchorY;
+    if (!fanfarePlayed) {
+      fanfarePlayed = true;
+      playFanfare();
+    }
   }
 
   // Travel: 90-frame ease from doorway to hug position, with walk animation
